@@ -1,4 +1,4 @@
-Flask>1.0.2
+Flask>=1.0.2
 PyMySQL>=0.9.3
 records>=0.5.3
 waitress>=1.4.4

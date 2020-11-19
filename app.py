@@ -1,6 +1,9 @@
 import os
 from flask import Flask
-from controller.mock import imock, imock_match, imock_data
+from controller.index import index
+from controller.user import login, get_user_info, logout
+from controller.todo import todo, get_todo_list
+from controller.data import idata
 from config import Config
 
 conf = Config.get(os.environ.get('FLASK_ENV'), Config['default'])
@@ -10,9 +13,13 @@ def create_app():
     app = Flask(__name__, static_url_path='/do_not_use_this_path__')
     app.config.from_object(conf)
 
-    app.route('/', methods=['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'])(imock)
-    app.route('/<path:sub_path>', methods=['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'])(imock_match)
-    app.route('/api/imock', methods=['GET', 'POST', 'DELETE'])(imock_data)
+    app.route('/')(index)
+    app.route('/api/user/login', methods=['POST'])(login)
+    app.route('/api/user/info')(get_user_info)
+    app.route('/api/user/logout', methods=['POST'])(logout)
+    app.route('/api/todo', methods=['POST'])(todo)
+    app.route('/api/todo/list')(get_todo_list)
+    app.route('/api/idata', methods=['POST'])(idata)
 
     return app
 

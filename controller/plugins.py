@@ -1,11 +1,15 @@
+import logging
+
 
 class Plugins:
     def fire(self, context):
-        for func in self.events:
-            func(context)
+        for p in self.events:
+            if p['source'] == context['source'] and p['target'] == context['target']:
+                logging.info(f"匹配成功：{p}")
+                exec(p['content'])
 
-    def register(self, func):
-        self.events.append(func)
+    def register(self, p):
+        self.events.append(p)
 
     def clear(self):
         self.events = []
@@ -24,12 +28,3 @@ class POST_PROXY(Plugins):
 pre_proxy = PRE_PROXY()
 post_proxy = POST_PROXY()
 
-
-def before_proxy(func):
-    pre_proxy.register(func)
-    return func
-
-
-def after_proxy(func):
-    post_proxy.register(func)
-    return func

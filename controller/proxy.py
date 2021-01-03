@@ -53,7 +53,7 @@ def get_proxy_response(req):
     url = req.url
     headers = dict(req.headers)
     req_instance = getattr(requests, method.lower())
-    context = {'request': req, 'source': req.headers.get(''), 'target': req.headers.get('host')}
+    context = {'request': req, 'source': req.headers.get('X-Real-IP'), 'target': req.headers.get('Host')}
     pre_proxy.fire(context)
 
     if method in ['GET', 'HEAD', 'OPTIONS']:

@@ -11,8 +11,8 @@ def create_app():
     app.config.from_object(conf)
 
     app.route('/', methods=['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'])(imock)
-    app.route('/<path:sub_path>', methods=['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'])(imock_match)
-    app.route('/api/imock', methods=['GET', 'POST', 'DELETE'])(imock_data)
+    app.route('/<path:path>', methods=['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'])(imock_match)
+    app.route('/api/_mock_settings_', methods=['GET', 'POST', 'DELETE'])(imock_data)
 
     return app
 

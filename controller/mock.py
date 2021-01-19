@@ -32,8 +32,8 @@ def imock():
     return make_response(url, request, conf, storage)
 
 
-def imock_match(sub_path):
-    url = '/' + sub_path
+def imock_match(path):
+    url = '/' + path
 
     return make_response(url, request, conf, storage)
 

@@ -1,11 +1,12 @@
 import json
-from flask import request, current_app as app
+import time
+from flask import request, current_app as app, jsonify
 from constant import SQLTYPE, DBKEYTYPE
 from lib.dbpool import DBPool
 
 
 def idata():
-    return query(request.json)
+    return jsonify(query(request.json))
 
 
 def warp_db_conn_info(data):
@@ -44,6 +45,7 @@ def query(data):
     app.logger.info(f'query data {json.dumps(data)}')
     ret = {
         "success": False,
+        "code": -1,
         "data": [],
         "type": None,
         "msg": None
@@ -63,6 +65,7 @@ def query(data):
         ret['msg'] = '查询语句不能为空'
         return ret
 
+    st = time.time()
     app.logger.info(f'查询语句: {sql}, 查询参数: {data.get("param")}')
     rows = db_conn.query(sql, **data.get('param'))
     results = []
@@ -77,18 +80,21 @@ def query(data):
     elif upper_sql.startswith(SQLTYPE.SELECT):
         sql_type = SQLTYPE.SELECT
         key = data.get('key', DBKEYTYPE.FIRST)
-        if key == 'all':
+        if key == DBKEYTYPE.ALL:
             results = rows.as_dict()
         else:  # 为了减少网络传输，默认只查询一行
-            first = rows.first()
-            results = [first.as_dict()] if first else []
+            first = rows.first(as_dict=True)
+            results = [first] if first else []
     else:
         sql_type = SQLTYPE.UNKNOWN
 
+    et = time.time()
     ret.update(
         {
             "success": True,
+            "code": 0,
             "data": results,
+            "time_cost": et - st,
             "type": sql_type,
             "msg": ''
         }

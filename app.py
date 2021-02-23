@@ -23,12 +23,15 @@ def create_app():
     app.route('/api/idata', methods=['POST'])(idata)
     # http api
     app.route('/api/http/', methods=['POST', 'GET'])(http.http_save)
-    app.route('/api/http/list', methods=['GET'])(http.http_list)
     app.route('/api/http/file', methods=['POST', 'DELETE'])(http.http_file)
     app.route('/api/http/debug', methods=['POST'])(http.http_debug)
-    app.route('/api/http/run/<int:id>', methods=['GET'])(http.http_run)
-    app.route('/api/http/debug', methods=['POST'])(http.http_debug)
-    app.route('/api/http/log/<int:id>', methods=['GET'])(http.http_log)
+    # http列表
+    app.route('/api/http/list', methods=['GET'])(http.http_list)
+    app.route('/api/http/run/<int:aid>', methods=['GET'])(http.http_run)
+    app.route('/api/http/api/log/<int:aid>', methods=['GET'])(http.http_api_log)
+    # http日志
+    app.route('/api/http/log/list', methods=['GET'])(http.http_log_list)
+    app.route('/api/http/log/<int:lid>', methods=['GET'])(http.http_log)
 
     return app
 

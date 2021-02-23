@@ -1,25 +1,34 @@
-from flask import jsonify, request
-from model.http import save_file, delete_file, save_api, get_api, get_api_list, debug_request, run_request, get_log
+from flask import jsonify
+from model.http import *
+from lib.http import HTTPRequest
 from lib.decorators import log_context
 
 
-@log_context()
-def http_list():
-    return get_api_list()
-
-
 def http_save():
+    """
+    用例保存、用例信息获取处理函数
+    """
     if request.method == 'GET':
-        return jsonify(get_api())
+        ret = get_api(request.args.get('id', 0))
     else:
-        return jsonify(save_api())
+        ret = save_api(request.json)
+
+    return jsonify({
+        "code": 0,
+        "success": True,
+        "data": ret,
+        "msg": None
+    })
 
 
 def http_file():
+    """
+    用例文件保存、删除处理函数
+    """
     if request.method == 'POST':
-        ret = save_file()
+        ret = save_file(request.files)
     else:
-        ret = delete_file()
+        ret = delete_file(request.json)
 
     if ret:
         return jsonify({"code": 0, "data": ret, "msg": ""})
@@ -28,15 +37,73 @@ def http_file():
 
 
 def http_debug():
-    ret = debug_request()
+    """用例调试处理函数"""
+    hr = HTTPRequest(request.json)
+    hr.do_request()
+    hr.validate()
+
+    return jsonify({
+        "code": 0,
+        "data": {
+            "result": hr.result,
+            "log": hr.log
+        },
+        "msg": ""
+    })
+
+
+def http_run(aid):
+    """
+    用例运行处理函数
+    """
+    row = get_api(aid)
+    hr = HTTPRequest(row)
+    hr.do_request()
+    hr.validate()
+    api_log(aid, hr.result, hr.log)
+
+    return jsonify({
+        "code": 0,
+        "data": {
+            "result": hr.result,
+            "log": hr.log
+        },
+        "msg": ""
+    })
+
+
+def http_api_log(aid):
+    """
+    用例日志查询处理函数
+    """
+    ret = get_log_by_api_id(aid)
     return jsonify({"code": 0, "data": ret, "msg": ""})
 
 
-def http_run(id):
-    ret = run_request(id)
-    return jsonify({"code": 0, "data": ret, "msg": ""})
+@log_context()
+def http_list():
+    """
+    用例列表查询处理函数
+    """
+    return {
+        "code": 0,
+        "success": True,
+        "data": get_api_list(request.args),
+        "msg": None
+    }
 
 
-def http_log(id):
-    ret = get_log(id)
+@log_context()
+def http_log_list():
+    """
+    用例日志查询处理函数
+    """
+    return get_log_list()
+
+
+def http_log(lid):
+    """
+    用例日志详情处理函数
+    """
+    ret = get_log_by_id(lid)
     return jsonify({"code": 0, "data": ret, "msg": ""})

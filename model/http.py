@@ -4,28 +4,26 @@ import json
 import logging
 from flask import request
 from . import get_db, query_with_pagination
-from lib.http import HTTPRequest
 
 
-def save_file():
-    if not request.files:
+def save_file(files):
+    if not files:
         return None
 
     l = []
-    for k, v in request.files.items():
+    for k, v in files.items():
         ext = v.filename.rsplit('.', 1)[1]
-        id = int(time.time())
-        fn = f'{id}.{ext}'
+        uid = int(time.time())
+        fn = f'{uid}.{ext}'
         fp = os.path.join(os.getcwd(), 'files', fn)
         v.save(fp)
-        l.append({'name': v.filename, 'fn': fn, 'url': f'/files/{fn}', 'id': id, 'type': v.content_type})
+        l.append({'name': v.filename, 'fn': fn, 'url': f'/files/{fn}', 'id': uid, 'type': v.content_type})
 
     return l
 
 
-def delete_file():
+def delete_file(data):
     try:
-        data = request.json
         fp = os.path.join(os.getcwd(), data['url'][1:])
         os.remove(fp)
 
@@ -35,8 +33,7 @@ def delete_file():
         return False
 
 
-def save_api():
-    data = request.json
+def save_api(data):
     if data.get('id'):
         sql = '''update http_api set name=:name, url=:url, method=:method, body=:body, headers=:headers, fileList=:fileList, validate=:validate, express=:express where id=:id'''
     else:
@@ -45,25 +42,13 @@ def save_api():
     data['fileList'] = json.dumps(data['fileList'])
     get_db().query(sql, **data)
 
-    return {
-        "code": 0,
-        "success": True,
-        "data": '',
-        "msg": None
-    }
 
-
-def get_api():
-    id = request.args.get('id')
+def get_api(aid):
     sql = '''select * from http_api where id=:id'''
-    row = get_db().query(sql, id=id).first(as_dict=True)
+    row = get_db().query(sql, id=aid).first(as_dict=True)
+    row['fileList'] = json.loads(row['fileList']) if row['fileList'] else []
 
-    return {
-        "code": 0,
-        "success": True,
-        "data": row,
-        "msg": None
-    }
+    return row
 
 
 def warp_query(data):
@@ -74,18 +59,48 @@ def warp_query(data):
         cond += ' and url=:url'
     if data.get('method'):
         cond += ' and method=:method'
-    if data.get('date1'):
-        cond += ' and created_time between :date1 and :date2'
 
     return cond
 
 
-def get_api_list():
-    data = request.args
+def get_api_list(data):
     page = int(data.get('pageNum', 1))
     size = int(data.get('pageSize', 10))
     cond = warp_query(data)
     sql = f'''select * from http_api where 1=1 {cond} order by id desc'''
+    conn = get_db()
+    rows, total = query_with_pagination(conn, sql, param=data, page=page, size=size)
+
+    return {
+        "list": rows,
+        "page": {
+            "total": total,
+            "pageNum": page,
+            "pageSize": size
+        }
+    }
+
+
+def api_log(aid, result, info):
+    sql = '''insert into http_api_log (api_id, status, content) values (:id, :status, :content)'''
+    get_db().query(sql, id=aid, status=result, content=json.dumps(info))
+    sql = '''update http_api set status=:status where id=:id'''
+    get_db().query(sql, id=aid, status=result)
+
+
+def get_log_by_api_id(aid):
+    sql = '''select content from http_api_log where api_id=:id order by id desc limit 1'''
+    row = get_db().query(sql, id=aid).first(as_dict=True)
+
+    return row['content'] if row else '["没有查找到用例日志"]'
+
+
+def get_log_list():
+    data = request.args
+    page = int(data.get('pageNum', 1))
+    size = int(data.get('pageSize', 10))
+    cond = warp_query(data)
+    sql = f'''select b.*, a.name, a.url, a.method from http_api a, http_api_log b where a.id=b.api_id {cond} order by b.id desc'''
     conn = get_db()
     rows, total = query_with_pagination(conn, sql, param=data, page=page, size=size)
 
@@ -104,39 +119,8 @@ def get_api_list():
     }
 
 
-def debug_request():
-    hr = HTTPRequest(request.json)
-    hr.do_request()
-    hr.validate()
+def get_log_by_id(lid):
+    sql = '''select content from http_api_log where id=:id'''
+    row = get_db().query(sql, id=lid).first(as_dict=True)
 
-    return {
-        'result': hr.result,
-        'log': hr.log
-    }
-
-
-def run_request(id):
-    sql = '''select * from http_api where id=:id'''
-    row = get_db().query(sql, id=id).first(as_dict=True)
-    row['fileList'] = json.loads(row['fileList']) if row['fileList'] else []
-
-    hr = HTTPRequest(row)
-    hr.do_request()
-    hr.validate()
-
-    sql = '''insert into http_api_log (api_id, result, logtext) values (:id, :result, :logtext)'''
-    get_db().query(sql, id=id, result=hr.result, logtext=json.dumps(hr.log))
-    sql = '''update http_api set status=:result where id=:id'''
-    get_db().query(sql, id=id, result=hr.result)
-
-    return {
-        'result': hr.result,
-        'log': hr.log
-    }
-
-
-def get_log(id):
-    sql = '''select logtext from http_api_log where api_id=:id order by id desc limit 1'''
-    row = get_db().query(sql, id=id).first(as_dict=True)
-
-    return row['logtext'] if row else '没有查找到用例日志'
+    return row['content'] if row else '["没有查找到用例日志"]'

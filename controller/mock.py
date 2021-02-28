@@ -88,7 +88,7 @@ def make_response(url, request, conf, storage):
         data = mock.get('data', '')
         if data:
             headers = mock.get('headers', {})
-            data = warp_data(mock, request)
+            data = merge_data(mock, request)
             return data, mock.get('code', 200), {**headers, **DEFAULT_HEADERS}
 
         no_pattern_response = mock.get('no_pattern_response')
@@ -105,8 +105,9 @@ def make_response(url, request, conf, storage):
     return default_rep
 
 
-def warp_data(mock, req):
-    if mock.get('type') == 'dynamic':       # 动态参数化
+def merge_data(mock, req):
+    # 动态参数化类型，返回格式化后的结果作为mock内容
+    if mock.get('type') == 'dynamic':
         if req.method in ['POST', 'PUT', 'DELETE']:
             if 'application/json' in req.headers.get('Content-Type', ''):
                 kw = req.json()
@@ -115,9 +116,11 @@ def warp_data(mock, req):
         else:
             kw = req.args
         data = mock.get('data').format(**kw)
-    elif mock.get('type') == 'express':     # Python表达式
+    # Python表达式类型，返回表达式执行的结果作为mock内容
+    elif mock.get('type') == 'express':
         data = eval(mock.get('data'))
-    else:                                   # text
+    # 默认为纯文本
+    else:
         data = mock.get('data')
 
     return data

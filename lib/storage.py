@@ -43,6 +43,9 @@ class MemoryStorage(BaseStorage):
     def remove(self, k):
         del self.mem[k]
 
+    def to_dict(self):
+        return self.mem
+
     def __str__(self):
         return json.dumps(self.mem)
 
@@ -79,6 +82,10 @@ class MysqlStorage(BaseStorage):
     def remove(self, k):
         sql = '''delete from http_mock where `key`=:key'''
         self.db.query(sql, key=k)
+
+    def to_dict(self):
+        sql = '''select `key`, code, headers, `data`, no_pattern_response, `type` from http_mock'''
+        return self.db.query(sql).all(as_dict=True)
 
     def __str__(self):
         sql = '''select `key`, code, headers, `data`, no_pattern_response, `type` from http_mock'''

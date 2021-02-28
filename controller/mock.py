@@ -1,6 +1,6 @@
 import os
 import requests
-from flask import request, current_app as app
+from flask import request, current_app as app, jsonify
 from lib.storage import Storage
 from config import Config
 from constant import NO_PATTERN_RESPONSE
@@ -15,15 +15,15 @@ def imock_data():
         data = request.json
         storage.remove(storage.make_key(data))
 
-        return str(storage), 200, {"Content-Type": "application/json"}
+        return jsonify({'code': 0, 'data': storage.to_dict()})
     elif request.method == 'POST':
         data = request.json
         key = storage.make_key(data)
         storage.set(key, data)
 
-        return str(storage), 200, {"Content-Type": "application/json"}
+        return jsonify({'code': 0, 'data': storage.to_dict()})
     else:
-        return str(storage), 200, {"Content-Type": "application/json"}
+        return jsonify({'code': 0, 'data': storage.to_dict()})
 
 
 def imock():
@@ -88,6 +88,7 @@ def make_response(url, request, conf, storage):
         data = mock.get('data', '')
         if data:
             headers = mock.get('headers', {})
+            data = warp_data(mock, request)
             return data, mock.get('code', 200), {**headers, **DEFAULT_HEADERS}
 
         no_pattern_response = mock.get('no_pattern_response')
@@ -102,3 +103,21 @@ def make_response(url, request, conf, storage):
         return get_proxy_response(request)
 
     return default_rep
+
+
+def warp_data(mock, req):
+    if mock.get('type') == 'dynamic':       # 动态参数化
+        if req.method in ['POST', 'PUT', 'DELETE']:
+            if 'application/json' in req.headers.get('Content-Type', ''):
+                kw = req.json()
+            else:
+                kw = req.form
+        else:
+            kw = req.args
+        data = mock.get('data').format(**kw)
+    elif mock.get('type') == 'express':     # Python表达式
+        data = eval(mock.get('data'))
+    else:                                   # text
+        data = mock.get('data')
+
+    return data

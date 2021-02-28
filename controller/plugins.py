@@ -4,7 +4,8 @@ import logging
 class Plugins:
     def fire(self, context):
         for p in self.events:
-            if p['source'] == context['source'] and p['target'] == context['target']:
+            if (p['source'] == '*' or p['source'] == context['source']) \
+                    and (p['target'] == '*' or p['target'] == context['target']):
                 logging.info(f"匹配成功：{p}")
                 exec(p['content'])
 
